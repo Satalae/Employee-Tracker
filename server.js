@@ -6,7 +6,9 @@ const cTable = require('console.table');
 const { addDep, addRole, addEmp } = require('./helpers/inquirerQuestions.js');
 
 // Lists and Stuff
-const listQuestions = ["View All Departments", "View All Roles", " View All Employees", "Add a new Department", "Add a new Role", "Add a new employee", "Update an Employee's Role", "Quit"];
+const listQuestions = ["View All Departments", "View All Roles", "View All Employees", "Add a new Department", "Add a new Role", "Add a new employee", "Update an Employee's Role", "Quit"];
+const showRoles = `SELECT * FROM roles JOIN department ON roles.department_id = department.id;`;
+const showEmps = `SELECT * FROM employee JOIN roles ON employee.role_id = roles.id;`;
 
 // Connect to DB
 const db = mysql.createConnection(
@@ -28,28 +30,33 @@ const viewAllDep = () => {
             return;
         }
         console.table(results);
+        console.log('\n');
         initQuestions();
     })
 }
 
+// Shows all roles with joined departments
 const viewAllRoles = () => {
-    db.query('SELECT * FROM roles', function (err, results) {
+    db.query(showRoles, function (err, results) {
         if(err){
             console.error(err);
             return;
         }
         console.table(results);
+        console.log('\n');
         initQuestions();
     })
 }
 
+// Shows all employees with joined roles
 const viewAllEmp = () => {
-    db.query('SELECT * FROM employee', function (err, results) {
+    db.query(showEmps, function (err, results) {
         if(err){
             console.error(err);
             return;
         }
         console.table(results);
+        console.log('\n');
         initQuestions();
     })
 }
@@ -62,20 +69,22 @@ const addNewDep = () => {
             message: "What is the new department's name?" 
         }
     ).then(async (answer) => {
+        // Acts in async by default, will recall init to return to origin.
+        // Nothing happens from where this funciton is called, so whenever
+        // This chain is broken, its over.
         const newDep = addDep(answer.name);
         db.query(newDep, function (err, results) {
             if(err){
                 console.error(err);
                 return;
             }
-            console.log("New Department added!");
+            console.log("New Department added! \n");
             initQuestions();
         })
     })
 }
 
 const addNewRole = () => {
-    viewAllRoles();
     inquirer.prompt([
         {
             name: "title",
@@ -85,28 +94,39 @@ const addNewRole = () => {
         {
             name: "salary",
             type: "input",
-            message: "What is this role's salary? "
+            message: "What is this role's salary? ",
+            validate: function(input) {
+                if(isNaN(input)){
+                    return "Please input a number.";
+                }
+                return true;
+            },
         },
         {
             name: "department",
             type: "input",
-            message: "What department does this role belong to? "
+            message: "What department does this role belong to? ",
+            validate: function(input){
+                if(isNaN(input)){
+                    return "Please input a number. ";
+                }
+                return true;
+            },
         },
-    ]).then(async ({title, salary, department}) => {
-        const newRole = addRole(title, salary, department);
+    ]).then(async (answer) => {
+        const newRole = addRole(answer.title, answer.salary, answer.department);
         db.query(newRole, function (err, results) {
             if(err){
                 console.error(err);
                 return;
             }
-            console.log("New Role added!");
+            console.log("New Role added! \n");
             initQuestions();
         })
     })
 }
 
 const addNewEmp = () => {
-    viewAllEmp();
     inquirer.prompt([
         {
             name: "first",
@@ -121,26 +141,39 @@ const addNewEmp = () => {
         {
             name: "role",
             type: "input",
-            message: "What is this new employee's role? "
+            message: "What is this new employee's role? ",
+            validate: function(input) {
+                if(isNaN(input)){
+                    return "Please input a number.";
+                }
+                return true;
+            },
         },
         {
             name: "manager",
             type: "input",
-            message: "What is the ID of this employee? "
+            message: "What is the ID of this employee's manager? ",
+            validate: function(input) {
+                if(isNaN(input)){
+                    return "Please input a number.";
+                }
+                return true;
+            },
         }
-    ]).then(async ({first, last, role, manager}) => {
-        const newEmp = addEmp(first, last, role, manager);
+    ]).then(async (answer) => {
+        const newEmp = addEmp(answer.first, answer.last, answer.role, answer.manager);
         db.query(newEmp, function (err, results) {
             if(err){
                 console.error(err);
                 return;
             }
-            console.log("New Employee added!");
+            console.log("New Employee added! \n");
             initQuestions();
         })
     })
 }
 
+// He'll do something... next time... hopefully...
 const updateEmp = () => {
 
 }
@@ -157,7 +190,6 @@ const initQuestions = async () => {
                 choices: listQuestions,
             }
         ]).then(async (answer) => {
-            console.log("Looking for: " + answer.init);
             switch(answer.init){
                 case "View All Departments":
                     viewAllDep();
@@ -186,6 +218,7 @@ const initQuestions = async () => {
             }
         }
     )
+    // Not needed but by golly he sure feels useful.
     return;
 };
 
