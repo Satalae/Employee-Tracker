@@ -3,12 +3,10 @@ require('dotenv').config();
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
 const cTable = require('console.table');
-// const inquiring = require('./helpers/inquirerQuestions.js');
+const { addDep, addRole, addEmp } = require('./helpers/inquirerQuestions.js');
 
 // Lists and Stuff
 const listQuestions = ["View All Departments", "View All Roles", " View All Employees", "Add a new Department", "Add a new Role", "Add a new employee", "Update an Employee's Role", "Quit"];
-const seedSQL = 'SOURCE ./db/seeds.sql';
-
 
 // Connect to DB
 const db = mysql.createConnection(
@@ -21,33 +19,16 @@ const db = mysql.createConnection(
     console.log(`Welcome to your Employee Database Manager! \n`)
 );
 
-// DB Initialization
-// db.query('SOURCE ./db/schema.sql', function (err, results) {
-//     if(err){
-//         console.error(err);
-//         return;
-//     }
-//     return;
-// });
-
-// DB Seeding for Tests
-db.query(seedSQL, function (err, results) {
-    if(err){
-        console.error(err);
-        return;
-    }
-    return;
-});
-
 // View All Departments
 const viewAllDep = () => {
     console.log("You are now viewing the departments. \n")
-    db.query('SELECT * FROM departments', function (err, results) {
+    db.query('SELECT * FROM department', function (err, results) {
         if(err){
             console.error(err);
             return;
         }
-        return console.table(results);
+        console.table(results);
+        initQuestions();
     })
 }
 
@@ -57,30 +38,107 @@ const viewAllRoles = () => {
             console.error(err);
             return;
         }
-        return console.table(results);
+        console.table(results);
+        initQuestions();
     })
 }
 
 const viewAllEmp = () => {
-    db.query('SELECT * FROM employees', function (err, results) {
+    db.query('SELECT * FROM employee', function (err, results) {
         if(err){
             console.error(err);
             return;
         }
-        return console.table(results);
+        console.table(results);
+        initQuestions();
     })
 }
 
 const addNewDep = () => {
-
+    inquirer.prompt(
+        {
+            name: "name",
+            type: "input",
+            message: "What is the new department's name?" 
+        }
+    ).then(async (answer) => {
+        const newDep = addDep(answer.name);
+        db.query(newDep, function (err, results) {
+            if(err){
+                console.error(err);
+                return;
+            }
+            console.log("New Department added!");
+            initQuestions();
+        })
+    })
 }
 
 const addNewRole = () => {
-
+    viewAllRoles();
+    inquirer.prompt([
+        {
+            name: "title",
+            type: "input",
+            message: "What is the new role's title? "
+        },
+        {
+            name: "salary",
+            type: "input",
+            message: "What is this role's salary? "
+        },
+        {
+            name: "department",
+            type: "input",
+            message: "What department does this role belong to? "
+        },
+    ]).then(async ({title, salary, department}) => {
+        const newRole = addRole(title, salary, department);
+        db.query(newRole, function (err, results) {
+            if(err){
+                console.error(err);
+                return;
+            }
+            console.log("New Role added!");
+            initQuestions();
+        })
+    })
 }
 
 const addNewEmp = () => {
-
+    viewAllEmp();
+    inquirer.prompt([
+        {
+            name: "first",
+            type: "input",
+            message: "What is their first name? "
+        },
+        {
+            name: "last",
+            type: "input",
+            message: "What is their last name? "
+        },
+        {
+            name: "role",
+            type: "input",
+            message: "What is this new employee's role? "
+        },
+        {
+            name: "manager",
+            type: "input",
+            message: "What is the ID of this employee? "
+        }
+    ]).then(async ({first, last, role, manager}) => {
+        const newEmp = addEmp(first, last, role, manager);
+        db.query(newEmp, function (err, results) {
+            if(err){
+                console.error(err);
+                return;
+            }
+            console.log("New Employee added!");
+            initQuestions();
+        })
+    })
 }
 
 const updateEmp = () => {
@@ -88,7 +146,7 @@ const updateEmp = () => {
 }
 
 // Inquirer Start
-const initQuestions = () => {
+const initQuestions = async () => {
     inquirer
         .prompt([
             {
@@ -103,48 +161,33 @@ const initQuestions = () => {
             switch(answer.init){
                 case "View All Departments":
                     viewAllDep();
-                    initQuestions();
                     break;
                 case "View All Roles":
                     viewAllRoles();
-                    initQuestions();
                     break;
                 case "View All Employees":
                     viewAllEmp();
-                    initQuestions();
                     break;
                 case "Add a new Department":
                     addNewDep();
-                    initQuestions();
                     break;
                 case "Add a new Role":
                     addNewRole();
-                    initQuestions();
                     break;
                 case "Add a new employee":
                     addNewEmp();
-                    initQuestions();
                     break;
                 case "Update an Employee's Role":
                     updateEmp();
                     break;
                 case "Quit":
-                    inquirer
-                        .prompt(
-                            {
-                                name: "leave",
-                                type: "confirm",
-                                message: "Would you like to quit? "
-                            }
-                        ).then((answer) => {
-                            if(answer === false){
-                                initQuestions();
-                            }
-                    })
-                    break;
+                    console.log("Thank you for using Employee Manager!");
+                    process.exit();
             }
         }
-)};
+    )
+    return;
+};
 
 // Initial Call
 initQuestions();
